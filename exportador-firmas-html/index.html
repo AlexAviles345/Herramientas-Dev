@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Instalar Firma en Gmail</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #f4f4f2; font-family: Arial, sans-serif; padding: 40px 20px; }
+  .container { max-width: 580px; margin: 0 auto; }
+  h1 { font-size: 15px; color: #888; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 28px; }
+  .card { background: #fff; border-radius: 14px; padding: 32px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .card-label { font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px; }
+  .btn { display: inline-block; background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 12px 28px; font-size: 14px; font-weight: bold; cursor: pointer; transition: background 0.15s; }
+  .btn:hover { background: #1d4ed8; }
+  .btn.success { background: #10b981; }
+  .steps { background: #fff; border-radius: 14px; padding: 28px 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .steps h2 { font-size: 14px; color: #333; margin-bottom: 16px; }
+  .step { display: flex; gap: 14px; margin-bottom: 14px; align-items: flex-start; }
+  .step-num { background: #2563eb; color: #fff; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .step p { font-size: 13px; color: #555; line-height: 1.6; }
+  .step a { color: #2563eb; }
+  code { background: #f0f0f0; padding: 1px 6px; border-radius: 4px; font-size: 12px; color: #333; }
+  .note { font-size: 12px; color: #aaa; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>✉ Instalador de Firma · Gmail</h1>
+
+  <div class="card">
+    <p class="card-label">Vista previa de tu firma</p>
+
+    <div id="signature">
+      <!-- La firma se genera dinámicamente desde config.js -->
+    </div>
+
+    <br>
+    <button class="btn" id="copyBtn" onclick="copiarFirma()">📋 &nbsp;Copiar firma para Gmail</button>
+    <p class="note" id="nota">Haz clic para copiar la firma en el formato correcto.</p>
+  </div>
+
+  <div class="steps">
+    <h2>Después de copiar, sigue estos pasos:</h2>
+    <div class="step">
+      <div class="step-num">1</div>
+      <p>Ve a <a href="https://mail.google.com/mail/u/0/#settings/general" target="_blank">Configuración de Gmail</a> → pestaña <strong>General</strong> → sección <strong>Firma</strong>.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <p>Haz clic en <strong>Crear nueva</strong> o selecciona la firma existente.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <p>Haz clic dentro del cuadro de texto de la firma y pega con <code>Ctrl+V</code>.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <p>Baja hasta el final de la página y haz clic en <strong>Guardar cambios</strong>.</p>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const container = document.getElementById('signature');
+  container.innerHTML = `
+<table cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,Helvetica,sans-serif;color:#333;width:max-content;"><tr><td style="padding-right:10px;vertical-align:middle;width:36px;"><table cellpadding="0" cellspacing="0" border="0"><tr><td style="width:36px;height:36px;background-color:#dbeafe;border-radius:50%;text-align:center;vertical-align:middle;font-size:13px;font-weight:bold;color:#1d4ed8;line-height:36px;">${firmaConfig.iniciales}</td></tr></table></td><td style="vertical-align:middle;border-left:2px solid #2563eb;padding-left:10px;line-height:1.2;"><span style="font-size:14px;font-weight:bold;color:#111;">${firmaConfig.nombre}</span><br><span style="font-size:11px;color:#555;">${firmaConfig.puesto} &nbsp;·&nbsp; <span style="color:#2563eb;font-weight:bold;">${firmaConfig.empresa}</span></span><br><span style="font-size:11px;color:#666;white-space:nowrap;">✉ <a href="mailto:${firmaConfig.correo}" style="color:#666;text-decoration:none;">${firmaConfig.correo}</a> &nbsp;|&nbsp; <a href="${firmaConfig.linkedin}" style="color:#666;text-decoration:none;">in LinkedIn</a> &nbsp;|&nbsp; <a href="${firmaConfig.github}" style="color:#666;text-decoration:none;">⌥ GitHub</a> &nbsp;|&nbsp; <a href="${firmaConfig.portafolio}" style="color:#666;text-decoration:none;">◎ Portafolio</a></span></td></tr></table>
+  `;
+});
+
+async function copiarFirma() {
+  const firma = document.getElementById('signature').innerHTML;
+  const btn = document.getElementById('copyBtn');
+  const nota = document.getElementById('nota');
+  try {
+    const blob = new Blob([firma], { type: 'text/html' });
+    const item = new ClipboardItem({ 'text/html': blob });
+    await navigator.clipboard.write([item]);
+    btn.textContent = '✓  ¡Firma copiada!';
+    btn.classList.add('success');
+    nota.textContent = 'Ahora pégala en el editor de firma de Gmail con Ctrl+V.';
+    setTimeout(() => {
+      btn.textContent = '📋  Copiar firma para Gmail';
+      btn.classList.remove('success');
+      nota.textContent = 'Haz clic para copiar la firma en el formato correcto.';
+    }, 4000);
+  } catch (e) {
+    nota.textContent = 'Error al copiar. Intenta seleccionar la firma manualmente y copiar con Ctrl+C.';
+  }
+}
+</script>
+</body>
+</html>

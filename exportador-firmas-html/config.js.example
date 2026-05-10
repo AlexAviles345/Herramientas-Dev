@@ -1,0 +1,14 @@
+// Archivo de configuración de la firma.
+// Copia este archivo como 'config.js' y reemplaza los valores entre comillas con tu información.
+// ¡El archivo 'config.js' está ignorado en git para proteger tus datos!
+
+const firmaConfig = {
+    iniciales: "IN",
+    nombre: "Nombre Completo",
+    puesto: "Título o Puesto de Trabajo",
+    empresa: "Nombre de la Empresa",
+    correo: "usuario@ejemplo.com",
+    linkedin: "https://linkedin.com/in/tu-usuario",
+    github: "https://github.com/tu-usuario",
+    portafolio: "https://tu-sitio-web.com"
+};
