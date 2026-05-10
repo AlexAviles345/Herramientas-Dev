@@ -35,3 +35,4 @@ build/
 ### Entorno y Variables Sensibles ###
 .env
 .env.*
+!.env.example
