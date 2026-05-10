@@ -10,3 +10,7 @@ Bienvenido al repositorio de utilidades para desarrollo, automatización, prueba
 | **[Instalador de Firma HTML](./exportador-firmas-html)** | Utilidad web para previsualizar firmas de correo electrónico y copiarlas en formato enriquecido (Rich Text) listo para pegar en Gmail. | HTML, CSS, JS Vanilla |
 
 > *Nota: Se irán agregando más herramientas y utilidades en el futuro.*
+
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia **MIT**. Puedes ver el archivo [LICENSE](./LICENSE) para más detalles. Siéntete libre de usar, modificar y distribuir estas herramientas.
