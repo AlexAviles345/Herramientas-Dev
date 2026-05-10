@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Limpiador de Metadatos</title>
+    <!-- Fuente moderna -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+        body { 
+            background: var(--bg-color); 
+            color: var(--text-main); 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            padding: 2rem; 
+            /* Fondo elegante con gradiente sutil */
+            background-image: radial-gradient(circle at top right, rgba(59, 130, 246, 0.15), transparent 40%),
+                              radial-gradient(circle at bottom left, rgba(167, 139, 250, 0.1), transparent 40%);
+        }
+        .container { 
+            background: var(--card-bg); 
+            backdrop-filter: blur(16px); 
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 24px; 
+            padding: 3rem; 
+            width: 100%; 
+            max-width: 600px; 
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); 
+            text-align: center; 
+        }
+        h1 { 
+            font-size: 2.2rem; 
+            margin-bottom: 0.5rem; 
+            background: linear-gradient(to right, #60a5fa, #a78bfa); 
+            -webkit-background-clip: text; 
+            color: transparent; 
+            font-weight: 800;
+        }
+        p.subtitle { 
+            color: var(--text-muted); 
+            margin-bottom: 2rem; 
+            font-weight: 400;
+            line-height: 1.5;
+        }
+        .drop-zone { 
+            border: 2px dashed rgba(255,255,255,0.2); 
+            border-radius: 16px; 
+            padding: 3rem 2rem; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            background: rgba(255,255,255,0.02); 
+        }
+        .drop-zone:hover, .drop-zone.dragover { 
+            border-color: var(--primary); 
+            background: rgba(59, 130, 246, 0.1); 
+        }
+        .btn { 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            padding: 14px 28px; 
+            border-radius: 12px; 
+            font-weight: 600; 
+            font-size: 1rem;
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+            margin-top: 1.5rem; 
+            display: none; 
+            width: 100%;
+            box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
+        }
+        .btn:hover { 
+            background: var(--primary-hover); 
+            transform: translateY(-2px); 
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+        .btn:active { 
+            transform: translateY(0); 
+        }
+        #preview { 
+            max-width: 100%; 
+            max-height: 300px; 
+            margin-top: 2rem; 
+            border-radius: 12px; 
+            display: none; 
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); 
+            margin-left: auto;
+            margin-right: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        canvas { display: none; }
+        .success-msg { color: #10b981; font-weight: 600; margin-top: 1rem; display: none; }
+        .metadata-panel { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 1.5rem; margin-top: 2rem; text-align: left; border: 1px solid rgba(255,255,255,0.1); display: none; }
+        .metadata-panel h3 { color: #60a5fa; margin-bottom: 1rem; font-size: 1.1rem; }
+        .metadata-list { list-style: none; font-size: 0.85rem; color: #cbd5e1; max-height: 200px; overflow-y: auto; padding-right: 10px; }
+        .metadata-list li { margin-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem; }
+        .metadata-list strong { color: #f8fafc; }
+        .no-meta { color: #10b981; font-weight: 600; display: none; }
+        
+        /* Custom Scrollbar */
+        .metadata-list::-webkit-scrollbar { width: 6px; }
+        .metadata-list::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; }
+        .metadata-list::-webkit-scrollbar-thumb { background: rgba(177, 151, 151, 0.2); border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="app-title">Limpiador EXIF</h1>
+        <p class="subtitle" id="app-desc">Sube una imagen para eliminar de forma segura y privada sus datos GPS, modelo de cámara, fechas e información oculta.</p>
+        
+        <div class="drop-zone" id="drop-zone">
+            <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: #60a5fa; margin-bottom: 1rem;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+            <p style="font-weight: 600; margin-bottom: 0.5rem; color: #e2e8f0;">Arrastra tu imagen aquí</p>
+            <p style="font-size: 0.85rem; color: #94a3b8;">o haz clic para explorar tus archivos (JPG, PNG, WEBP)</p>
+            <input type="file" id="file-input" accept="image/jpeg, image/png, image/webp" style="display: none;">
+        </div>
+
+        <img id="preview" alt="Vista previa">
+        
+        <div id="metadata-panel" class="metadata-panel">
+            <h3>👁️ Metadatos Encontrados</h3>
+            <ul id="metadata-list" class="metadata-list"></ul>
+            <p id="no-meta-msg" class="no-meta">✓ Esta imagen está limpia. No contiene metadatos EXIF.</p>
+        </div>
+
+        <button id="download-btn" class="btn">Descargar Imagen Limpia</button>
+        <p class="success-msg" id="success-msg">✓ Descarga iniciada con éxito</p>
+        
+        <!-- Canvas oculto para procesar la imagen -->
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <!-- Librería para leer EXIF -->
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const preview = document.getElementById('preview');
+        const metadataPanel = document.getElementById('metadata-panel');
+        const metadataList = document.getElementById('metadata-list');
+        const noMetaMsg = document.getElementById('no-meta-msg');
+        const downloadBtn = document.getElementById('download-btn');
+        const canvas = document.getElementById('canvas');
+        const successMsg = document.getElementById('success-msg');
+        const ctx = canvas.getContext('2d');
+        
+        let cleanedBlobUrl = null;
+        let originalFileName = '';
+
+        // Eventos del drag and drop
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) handleFile(e.target.files[0]);
+        });
+
+        // Lógica de limpieza (re-renderizado en canvas)
+        function handleFile(file) {
+            successMsg.style.display = 'none';
+            if (!file.type.startsWith('image/')) {
+                alert('Por favor selecciona un archivo de imagen válido.');
+                return;
+            }
+            originalFileName = file.name;
+            
+            // Extraer y mostrar metadatos (EXIF)
+            EXIF.getData(file, function() {
+                const allMetaData = EXIF.getAllTags(this);
+                metadataList.innerHTML = '';
+                metadataPanel.style.display = 'block';
+                let foundTags = 0;
+
+                if (Object.keys(allMetaData).length > 0) {
+                    for (let tag in allMetaData) {
+                        if (tag === 'thumbnail') continue; // Ignorar miniatura binaria
+                        let val = allMetaData[tag];
+                        if (Array.isArray(val)) val = val.join(', ');
+                        
+                        const li = document.createElement('li');
+                        li.innerHTML = `<strong>${tag}:</strong> <span style="word-break: break-all;">${val}</span>`;
+                        metadataList.appendChild(li);
+                        foundTags++;
+                    }
+                }
+                
+                if (foundTags === 0) {
+                    noMetaMsg.style.display = 'block';
+                    metadataList.style.display = 'none';
+                } else {
+                    noMetaMsg.style.display = 'none';
+                    metadataList.style.display = 'block';
+                }
+            });
+
+            const reader = new FileReader();
+            
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    // Mostrar preview
+                    preview.src = event.target.result;
+                    preview.style.display = 'block';
+                    
+                    // Ajustar canvas y dibujar (esto omite los metadatos)
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // Extraer nueva imagen limpia del canvas
+                    const format = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+                    
+                    canvas.toBlob((blob) => {
+                        if (cleanedBlobUrl) URL.revokeObjectURL(cleanedBlobUrl); // Liberar memoria
+                        cleanedBlobUrl = URL.createObjectURL(blob);
+                        downloadBtn.style.display = 'inline-block';
+                    }, format, 0.95); // 0.95 calidad para JPG
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Evento de descarga
+        downloadBtn.addEventListener('click', () => {
+            if (!cleanedBlobUrl) return;
+            const a = document.createElement('a');
+            a.href = cleanedBlobUrl;
+            
+            // Generar nombre de archivo
+            const parts = originalFileName.split('.');
+            const ext = parts.pop();
+            const name = parts.join('.');
+            a.download = `${name}_limpia.${ext}`;
+            
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            successMsg.style.display = 'block';
+            setTimeout(() => { successMsg.style.display = 'none'; }, 3000);
+        });
+    </script>
+</body>
+</html>
