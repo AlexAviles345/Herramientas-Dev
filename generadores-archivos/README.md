@@ -8,5 +8,6 @@ Esta categoría agrupa diferentes herramientas diseñadas para generar archivos 
 | :--- | :--- | :--- |
 | **[Generador de PDF](./generador-pdf)** | Genera archivos PDF de un tamaño específico en MB de forma rápida y precisa usando calibración. | Python, ReportLab |
 | **[Generador de Imágenes](./generador-imagen)** | Herramienta GUI para generar imágenes configurando resolución, formato (incluyendo WEBP), o alcanzando pesos exactos mediante cálculo de píxeles o inyección de padding. | Python, Tkinter, Pillow |
+| **[Generador Binario](./generador-binario)** | Herramienta GUI para crear archivos binarios (.bin) de peso exacto (KB, MB, GB) con contenido de ceros, bytes aleatorios incomprimibles o patrones de texto repetitivos. | Python, Tkinter |
 
 > *Próximamente se agregarán generadores para otros tipos de formatos.*
