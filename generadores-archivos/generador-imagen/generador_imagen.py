@@ -28,6 +28,11 @@ class ImageGeneratorApp:
         self.setup_tab_peso()
         self.setup_tab_inflador()
 
+        # Barra de Progreso
+        self.progress_var = tk.DoubleVar()
+        self.progress_bar = ttk.Progressbar(self.root, variable=self.progress_var, maximum=100)
+        self.progress_bar.pack(fill="x", padx=10, pady=(0, 10))
+
     def draw_centered_text(self, img, text):
         draw = ImageDraw.Draw(img)
         width, height = img.size
@@ -195,6 +200,10 @@ class ImageGeneratorApp:
             texto = f"Modo Inflador\n{w}x{h}\nTarget: {target_mb} MB"
             self.draw_centered_text(img, texto)
             
+            self.progress_var.set(0)
+            self.root.config(cursor="wait")
+            self.root.update()
+            
             filename = f"salida/inflado_{str(target_mb).replace('.', '_')}MB{self.get_extension(fmt)}"
             img.save(filename, format=fmt)
             
@@ -206,6 +215,7 @@ class ImageGeneratorApp:
                 
             # Inflar el archivo añadiendo ceros al final
             bytes_to_add = target_bytes - current_bytes
+            total_to_add = bytes_to_add
             with open(filename, 'ab') as f:
                 # Escribimos en bloques para no saturar RAM si es muy grande
                 chunk_size = 1024 * 1024 # 1 MB
@@ -214,10 +224,19 @@ class ImageGeneratorApp:
                     f.write(b'\0' * write_size)
                     bytes_to_add -= write_size
                     
+                    added = total_to_add - bytes_to_add
+                    if (added // chunk_size) % 10 == 0 or bytes_to_add == 0:
+                        self.progress_var.set((added / max(1, total_to_add)) * 100)
+                        self.root.update()
+                        
+            self.root.config(cursor="")
+                    
             size_mb = os.path.getsize(filename) / (1024 * 1024)
             messagebox.showinfo("Éxito", f"Imagen inflada guardada: {filename}\nPeso real exacto: {size_mb:.2f} MB")
             
         except Exception as e:
+            self.root.config(cursor="")
+            self.progress_var.set(0)
             messagebox.showerror("Error", str(e))
 
 if __name__ == "__main__":

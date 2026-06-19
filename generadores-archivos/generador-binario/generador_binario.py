@@ -62,7 +62,12 @@ class BinaryGeneratorApp:
         ttk.Entry(ext_frame, textvariable=self.ext_var, width=10).pack(side="left", padx=10)
 
         # Botón Generar
-        ttk.Button(main_frame, text="Generar Archivo", command=self.generate_file).pack(pady=25)
+        ttk.Button(main_frame, text="Generar Archivo", command=self.generate_file).pack(pady=10)
+
+        # Barra de Progreso
+        self.progress_var = tk.DoubleVar()
+        self.progress_bar = ttk.Progressbar(main_frame, variable=self.progress_var, maximum=100)
+        self.progress_bar.pack(fill="x", pady=5)
 
         # Inicializar la etiqueta de ayuda
         self.update_hint()
@@ -107,6 +112,10 @@ class BinaryGeneratorApp:
             
             start_time = time.time()
             
+            self.progress_var.set(0)
+            self.root.config(cursor="wait")
+            self.root.update()
+            
             with open(filename, 'wb') as f:
                 while bytes_written < target_bytes:
                     write_size = min(chunk_size, target_bytes - bytes_written)
@@ -125,9 +134,15 @@ class BinaryGeneratorApp:
                     
                     f.write(chunk)
                     bytes_written += write_size
+
+                    # Actualizar progreso cada ~10 MB para no saturar la UI
+                    if (bytes_written // chunk_size) % 10 == 0 or bytes_written == target_bytes:
+                        self.progress_var.set((bytes_written / target_bytes) * 100)
+                        self.root.update()
             
             elapsed = time.time() - start_time
             actual_size = os.path.getsize(filename) / (1024 * 1024)
+            self.root.config(cursor="")
             
             messagebox.showinfo("Completado", 
                                 f"Archivo generado exitosamente.\n\n"
@@ -136,6 +151,8 @@ class BinaryGeneratorApp:
                                 f"Tiempo: {elapsed:.2f} segundos")
 
         except Exception as e:
+            self.root.config(cursor="")
+            self.progress_var.set(0)
             messagebox.showerror("Error", str(e))
 
 if __name__ == "__main__":

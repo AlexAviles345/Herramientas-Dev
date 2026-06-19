@@ -45,6 +45,11 @@ class PDFGeneratorApp:
         self.pass_entry = ttk.Entry(self.pass_frame, textvariable=self.pass_var, show="*")
         self.pass_entry.pack(side="left", padx=5)
 
+        # Barra de Progreso
+        self.progress_var = tk.DoubleVar()
+        self.progress_bar = ttk.Progressbar(self.root, variable=self.progress_var, maximum=100)
+        self.progress_bar.pack(fill="x", padx=10, pady=(0, 10))
+
     def toggle_password(self):
         if self.enc_var.get():
             self.pass_frame.pack(fill="x", pady=5)
@@ -80,8 +85,10 @@ class PDFGeneratorApp:
                 pagina += 1
                 y = 800
             
-            # Pequeña actualización a la UI para evitar congelamientos completos
-            if i % 50000 == 0:
+            # Actualización a la UI para evitar congelamientos completos
+            if i % 10000 == 0 or i == total_lineas - 1:
+                if hasattr(self, 'progress_var'):
+                    self.progress_var.set((i / max(1, total_lineas)) * 100)
                 self.root.update()
         pdf.save()
 
@@ -114,7 +121,9 @@ class PDFGeneratorApp:
             enc = self.get_encryption()
 
             # Calibración
+            self.progress_var.set(0)
             self.root.config(cursor="wait")
+            self.root.update()
             
             if self.texto_modo.get() == "rapido":
                 # Modo rápido (sin temporales)
@@ -176,7 +185,9 @@ class PDFGeneratorApp:
             archivo_final = f"salida/pdf_inflado_{tamano_str}MB.pdf"
             enc = self.get_encryption()
 
+            self.progress_var.set(0)
             self.root.config(cursor="wait")
+            self.root.update()
             
             # Generar PDF base
             pdf = canvas.Canvas(archivo_final, encrypt=enc)
@@ -192,11 +203,17 @@ class PDFGeneratorApp:
             if current_size < target_bytes:
                 with open(archivo_final, 'ab') as f:
                     bytes_to_add = target_bytes - current_size
+                    total_to_add = bytes_to_add
                     chunk = 1024 * 1024
                     while bytes_to_add > 0:
                         w = min(chunk, bytes_to_add)
                         f.write(b'\0' * w)
                         bytes_to_add -= w
+                        
+                        added = total_to_add - bytes_to_add
+                        if (added // chunk) % 10 == 0 or bytes_to_add == 0:
+                            self.progress_var.set((added / total_to_add) * 100)
+                            self.root.update()
                         
             self.root.config(cursor="")
             tamano_real = os.path.getsize(archivo_final) / (1024 * 1024)
