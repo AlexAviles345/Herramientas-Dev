@@ -2,6 +2,11 @@
 
 Esta herramienta permite generar archivos PDF de un tamaño específico (en MB).
 
+## 🛠️ Tecnologías
+
+- Python 3
+- ReportLab (Generación de PDFs)
+
 ## Requisitos
 
 Instalar las dependencias necesarias:
