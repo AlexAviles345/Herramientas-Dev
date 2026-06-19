@@ -1,148 +1,212 @@
-from reportlab.pdfgen import canvas
+import tkinter as tk
+from tkinter import ttk, messagebox
 import os
 import math
+import time
+from reportlab.pdfgen import canvas
+from reportlab.lib.pdfencrypt import StandardEncryption
 
 os.makedirs("salida", exist_ok=True)
-
 ARCHIVO_TEMP = "salida/pdf_temporal.pdf"
-
-# Datos obtenidos de pruebas previas
 MB_POR_LINEA_ESTIMADO = 70.07 / 290000
-
-# Solo para calibración
 MUESTRA_LINEAS = 20000
 
+class PDFGeneratorApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Generador de PDF")
+        self.root.geometry("450x450")
+        self.root.resizable(False, False)
 
-def generar_pdf(nombre_archivo, total_lineas):
-    pdf = canvas.Canvas(nombre_archivo, pageCompression=0)
+        # Tabs
+        self.notebook = ttk.Notebook(self.root)
+        self.notebook.pack(expand=1, fill="both", padx=10, pady=(10, 5))
 
-    y = 800
-    pagina = 1
+        self.tab_texto = ttk.Frame(self.notebook)
+        self.tab_inflador = ttk.Frame(self.notebook)
 
-    for i in range(total_lineas):
+        self.notebook.add(self.tab_texto, text="Modo Texto (Clásico)")
+        self.notebook.add(self.tab_inflador, text="Modo Inflador (Rápido)")
 
-        texto = (
-            f"Pagina {pagina} Registro {i} "
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ "
-            "abcdefghijklmnopqrstuvwxyz "
-            "0123456789 "
-            "Lorem ipsum dolor sit amet consectetur adipiscing elit "
-            "sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
-        )
+        self.setup_tab_texto()
+        self.setup_tab_inflador()
 
-        pdf.drawString(20, y, texto)
+        # Encriptación
+        enc_frame = ttk.LabelFrame(self.root, text="Seguridad", padding=10)
+        enc_frame.pack(fill="x", padx=10, pady=(0, 10))
+        
+        self.enc_var = tk.BooleanVar(value=False)
+        enc_check = ttk.Checkbutton(enc_frame, text="Proteger con contraseña", variable=self.enc_var, command=self.toggle_password)
+        enc_check.pack(anchor="w")
 
-        y -= 15
+        self.pass_frame = ttk.Frame(enc_frame)
+        ttk.Label(self.pass_frame, text="Contraseña:").pack(side="left")
+        self.pass_var = tk.StringVar(value="")
+        self.pass_entry = ttk.Entry(self.pass_frame, textvariable=self.pass_var, show="*")
+        self.pass_entry.pack(side="left", padx=5)
 
-        if y < 50:
-            pdf.showPage()
-            pagina += 1
-            y = 800
+    def toggle_password(self):
+        if self.enc_var.get():
+            self.pass_frame.pack(fill="x", pady=5)
+        else:
+            self.pass_frame.pack_forget()
 
-        if i % 10000 == 0 and i > 0:
-            print(f"Procesadas {i:,} lineas...")
+    def get_encryption(self):
+        if self.enc_var.get() and self.pass_var.get():
+            pwd = self.pass_var.get()
+            return StandardEncryption(pwd, pwd)
+        return None
 
-    pdf.save()
+    # ===============================
+    # LÓGICA BASE DEL PDF
+    # ===============================
+    def _escribir_lineas_pdf(self, nombre_archivo, total_lineas, enc=None):
+        pdf = canvas.Canvas(nombre_archivo, encrypt=enc, pageCompression=0)
+        y = 800
+        pagina = 1
+        for i in range(total_lineas):
+            texto = (
+                f"Pagina {pagina} Registro {i} "
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ "
+                "abcdefghijklmnopqrstuvwxyz "
+                "0123456789 "
+                "Lorem ipsum dolor sit amet consectetur adipiscing elit "
+                "sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+            )
+            pdf.drawString(20, y, texto)
+            y -= 15
+            if y < 50:
+                pdf.showPage()
+                pagina += 1
+                y = 800
+            
+            # Pequeña actualización a la UI para evitar congelamientos completos
+            if i % 50000 == 0:
+                self.root.update()
+        pdf.save()
 
+    # ===============================
+    # MODO TEXTO (Preciso/Clásico)
+    # ===============================
+    def setup_tab_texto(self):
+        frame = self.tab_texto
+        
+        ttk.Label(frame, text="Genera un PDF exacto a base de millones de letras.", justify="center").pack(pady=10)
+        
+        ttk.Label(frame, text="Tamaño deseado (MB):").pack()
+        self.texto_mb = ttk.Entry(frame)
+        self.texto_mb.insert(0, "5")
+        self.texto_mb.pack(pady=5)
 
-def mostrar_resultado(objetivo_mb, archivo):
-    tamano_real = os.path.getsize(archivo) / (1024 * 1024)
+        self.texto_modo = tk.StringVar(value="preciso")
+        ttk.Radiobutton(frame, text="Modo Preciso (Doble calibración, usa espacio temporal)", variable=self.texto_modo, value="preciso").pack(anchor="w", padx=30, pady=(10, 0))
+        ttk.Radiobutton(frame, text="Modo Rápido (Estimación matemática, sin temporales)", variable=self.texto_modo, value="rapido").pack(anchor="w", padx=30, pady=(0, 10))
 
-    print("\n=== RESULTADO ===")
-    print("Archivo:", os.path.abspath(archivo))
-    print(f"Tamaño solicitado: {objetivo_mb:.2f} MB")
-    print(f"Tamaño obtenido:   {tamano_real:.2f} MB")
-    print(f"Diferencia:        {tamano_real - objetivo_mb:+.2f} MB")
+        ttk.Button(frame, text="Generar PDF", command=self.generate_texto).pack(pady=10)
 
+    def generate_texto(self):
+        try:
+            target_mb = float(self.texto_mb.get())
+            if target_mb <= 0: raise ValueError("El peso debe ser mayor a 0.")
+            
+            tamano_str = f"{target_mb:g}".replace(".", "_")
+            archivo_final = f"salida/pdf_texto_{tamano_str}MB.pdf"
+            enc = self.get_encryption()
 
-def modo_rapido(objetivo_mb):
-    print("\n=== MODO RÁPIDO ===")
+            # Calibración
+            self.root.config(cursor="wait")
+            
+            if self.texto_modo.get() == "rapido":
+                # Modo rápido (sin temporales)
+                total_lineas = int(target_mb / MB_POR_LINEA_ESTIMADO)
+                self._escribir_lineas_pdf(archivo_final, total_lineas, enc)
+            else:
+                # Paso 1: Muestra
+                self._escribir_lineas_pdf(ARCHIVO_TEMP, MUESTRA_LINEAS, enc)
+                tamano_muestra = os.path.getsize(ARCHIVO_TEMP) / (1024 * 1024)
+                mb_por_linea = tamano_muestra / MUESTRA_LINEAS
+                lineas_estimadas = math.ceil(target_mb / mb_por_linea)
+                os.remove(ARCHIVO_TEMP)
 
-    tamano_str = f"{objetivo_mb:g}".replace(".", "_")
-    archivo_final = f"salida/pdf_generado_{tamano_str}MB.pdf"
+                # Paso 2: Prueba
+                self._escribir_lineas_pdf(ARCHIVO_TEMP, lineas_estimadas, enc)
+                tamano_prueba = os.path.getsize(ARCHIVO_TEMP) / (1024 * 1024)
+                factor_correccion = target_mb / tamano_prueba
+                lineas_corregidas = math.ceil(lineas_estimadas * factor_correccion)
+                os.remove(ARCHIVO_TEMP)
 
-    total_lineas = int(objetivo_mb / MB_POR_LINEA_ESTIMADO)
+                # Paso 3: Final
+                self._escribir_lineas_pdf(archivo_final, lineas_corregidas, enc)
+            
+            self.root.config(cursor="")
+            tamano_real = os.path.getsize(archivo_final) / (1024 * 1024)
+            messagebox.showinfo("Completado", f"Archivo: {archivo_final}\nPeso final: {tamano_real:.2f} MB")
+            
+        except Exception as e:
+            self.root.config(cursor="")
+            messagebox.showerror("Error", str(e))
 
-    print(f"Líneas estimadas: {total_lineas:,}")
-    print("Generando PDF...\n")
+    # ===============================
+    # MODO INFLADOR
+    # ===============================
+    def setup_tab_inflador(self):
+        frame = self.tab_inflador
+        
+        ttk.Label(frame, text="Genera un PDF con un número fijo de páginas\ny lo infla inyectando bytes para alcanzar el peso.", justify="center").pack(pady=10)
+        
+        ttk.Label(frame, text="Número de Páginas:").pack()
+        self.infl_pages = ttk.Entry(frame)
+        self.infl_pages.insert(0, "5")
+        self.infl_pages.pack(pady=5)
 
-    generar_pdf(archivo_final, total_lineas)
+        ttk.Label(frame, text="Peso Deseado (MB):").pack()
+        self.infl_mb = ttk.Entry(frame)
+        self.infl_mb.insert(0, "15")
+        self.infl_mb.pack(pady=5)
 
-    mostrar_resultado(objetivo_mb, archivo_final)
+        ttk.Button(frame, text="Generar e Inflar", command=self.generate_inflador).pack(pady=20)
 
+    def generate_inflador(self):
+        try:
+            pages = int(self.infl_pages.get())
+            target_mb = float(self.infl_mb.get())
+            if target_mb <= 0 or pages <= 0: raise ValueError("Páginas y peso deben ser mayores a 0.")
+            
+            tamano_str = f"{target_mb:g}".replace(".", "_")
+            archivo_final = f"salida/pdf_inflado_{tamano_str}MB.pdf"
+            enc = self.get_encryption()
 
-def modo_preciso(objetivo_mb):
-    print("\n=== MODO PRECISO ===")
+            self.root.config(cursor="wait")
+            
+            # Generar PDF base
+            pdf = canvas.Canvas(archivo_final, encrypt=enc)
+            for p in range(pages):
+                pdf.drawString(200, 400, f"Pagina inflada {p+1} / {pages}")
+                pdf.showPage()
+            pdf.save()
 
-    tamano_str = f"{objetivo_mb:g}".replace(".", "_")
-    archivo_final = f"salida/pdf_generado_{tamano_str}MB.pdf"
+            # Inflar
+            current_size = os.path.getsize(archivo_final)
+            target_bytes = int(target_mb * 1024 * 1024)
+            
+            if current_size < target_bytes:
+                with open(archivo_final, 'ab') as f:
+                    bytes_to_add = target_bytes - current_size
+                    chunk = 1024 * 1024
+                    while bytes_to_add > 0:
+                        w = min(chunk, bytes_to_add)
+                        f.write(b'\0' * w)
+                        bytes_to_add -= w
+                        
+            self.root.config(cursor="")
+            tamano_real = os.path.getsize(archivo_final) / (1024 * 1024)
+            messagebox.showinfo("Completado", f"Archivo: {archivo_final}\nPeso final: {tamano_real:.2f} MB")
+            
+        except Exception as e:
+            self.root.config(cursor="")
+            messagebox.showerror("Error", str(e))
 
-    print("\n[1/4] Generando muestra de calibración...")
-
-    generar_pdf(ARCHIVO_TEMP, MUESTRA_LINEAS)
-
-    tamano_muestra = os.path.getsize(ARCHIVO_TEMP) / (1024 * 1024)
-
-    print(f"Muestra: {MUESTRA_LINEAS:,} líneas")
-    print(f"Tamaño muestra: {tamano_muestra:.4f} MB")
-
-    mb_por_linea = tamano_muestra / MUESTRA_LINEAS
-
-    lineas_estimadas = math.ceil(objetivo_mb / mb_por_linea)
-
-    print("\n[2/4] Primera estimación...")
-    print(f"Líneas estimadas: {lineas_estimadas:,}")
-
-    os.remove(ARCHIVO_TEMP)
-
-    print("\n[3/4] Generando PDF de prueba...")
-
-    generar_pdf(ARCHIVO_TEMP, lineas_estimadas)
-
-    tamano_prueba = os.path.getsize(ARCHIVO_TEMP) / (1024 * 1024)
-
-    print(f"Tamaño obtenido: {tamano_prueba:.2f} MB")
-
-    factor_correccion = objetivo_mb / tamano_prueba
-
-    lineas_corregidas = math.ceil(
-        lineas_estimadas * factor_correccion
-    )
-
-    print("\nCorrección aplicada")
-    print(f"Factor: {factor_correccion:.6f}")
-    print(f"Líneas corregidas: {lineas_corregidas:,}")
-
-    os.remove(ARCHIVO_TEMP)
-
-    print("\n[4/4] Generando PDF final...")
-
-    generar_pdf(archivo_final, lineas_corregidas)
-
-    mostrar_resultado(objetivo_mb, archivo_final)
-
-
-# ---------------------------
-# MENÚ PRINCIPAL
-# ---------------------------
-
-print("===================================")
-print(" GENERADOR DE PDF POR TAMAÑO")
-print("===================================")
-
-objetivo_mb = float(input("\nTamaño deseado (MB): "))
-
-print("\nSeleccione el modelo:")
-print("1 - Rápido (menos uso de disco)")
-print("2 - Preciso (doble calibración)")
-
-opcion = input("\nOpción: ").strip()
-
-if opcion == "1":
-    modo_rapido(objetivo_mb)
-
-elif opcion == "2":
-    modo_preciso(objetivo_mb)
-
-else:
-    print("\nOpción no válida.")
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = PDFGeneratorApp(root)
+    root.mainloop()
